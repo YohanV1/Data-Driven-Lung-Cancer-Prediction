@@ -1,7 +1,10 @@
 import streamlit as st
 import pandas as pd
 import pickle
-from sklearn.metrics.pairwise import manhattan_distances
+from sklearn.preprocessing import StandardScaler
+import warnings
+
+warnings.filterwarnings("ignore")
 
 @st.cache_resource
 def load_model():
@@ -9,6 +12,10 @@ def load_model():
         loaded_knn_model = pickle.load(file)
 
     return loaded_knn_model
+
+
+with open('scaler.pkl', 'rb') as file:
+    scaler = pickle.load(file)
 
 
 st.set_page_config(layout="wide", page_title='Lung Cancer Staging and '
@@ -21,12 +28,6 @@ with st.sidebar.expander("About"):
              "[Kaggle](https://www.kaggle.com/datasets/thedevastator/cancer-patients-and-air-pollution-a-new-link)."
              " Please don't hesitate to reach out.")
 # with st.sidebar.expander('Model Metrics '):
-#     st.subheader("Decision Tree: ")
-#     st.write("Train = 84.06%, Test = 85.33%")
-#     st.subheader("Random Forest: ")
-#     st.write("Train = 93.05%, Test = 89.67%")
-#     st.subheader("XGBoost: ")
-#     st.write("Train = 95.78%, Test = 90.76%")
 
 st.sidebar.write('Parameters can be tuned further for better results.')
 knn_model = load_model()
@@ -45,22 +46,24 @@ with col1:
 b = st.button("Run Model.")
 
 if b:
-        data = {
-            'Coughing of Blood': coughing_blood,
-            'Passive Smoker': passive_smoker,
-            'Obesity': obesity,
-            'Dust Allergy': dust_allergy,
-            'Genetic Risk': genetic_risk
-        }
-        df = pd.DataFrame(data)
+    data = {
+        'Coughing of Blood': [int(coughing_blood)],
+        'Passive Smoker': [int(passive_smoker)],
+        'Obesity': [int(obesity)],
+        'Dust Allergy': [int(dust_allergy)],
+        'Genetic Risk': [int(genetic_risk)]
+    }
+    print(data)
 
-        prediction = knn_model.predict(df.iloc[0:1])
+    df_data = pd.DataFrame(data)
 
-        st.subheader(f"Prediction: {prediction}")
-        # if prediction[0] == 0:
+    # Scale the user input
+    xs = scaler.transform(df_data)
 
-        #     st.success('Patient does not have heart disease. '
-        #                '[Prediction from XGBoost]')
-        # if prediction[0] == 1:
-        #     st.error('Patient has heart disease.'
-        #              '[Prediction from XGBoost]')
+    df_xs = pd.DataFrame(xs, columns=df_data.columns)
+    print(xs)
+    # Make prediction using KNN model
+    prediction = knn_model.predict(df_xs)
+    st.subheader(f"Prediction: {prediction}")
+
+
